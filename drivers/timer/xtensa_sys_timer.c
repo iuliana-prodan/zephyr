@@ -25,6 +25,15 @@ static void set_ccompare(uint32_t val)
 			  :: "r"(val));
 }
 
+static int get_ccompare()
+{
+	uint32_t val;
+
+	__asm__ volatile ("rsr.CCOMPARE" STRINGIFY(CONFIG_XTENSA_TIMER_ID) " %0"
+			  :: "r"(val));
+	return val;
+}
+
 static uint32_t ccount(void)
 {
 	uint32_t val;
@@ -40,6 +49,11 @@ static void ccompare_isr(const void *arg)
 	k_spinlock_key_t key = k_spin_lock(&lock);
 	uint32_t curr = ccount();
 	uint32_t dticks = (curr - last_count) / CYC_PER_TICK;
+	uint32_t val;
+
+	/* Clear the interrupt */
+	val = get_ccompare();
+	set_ccompare(val);
 
 	last_count += dticks * CYC_PER_TICK;
 
