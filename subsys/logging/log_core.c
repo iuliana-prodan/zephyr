@@ -113,6 +113,36 @@ static const struct mpsc_pbuf_buffer_config mpsc_config = {
 bool log_is_strdup(const void *buf);
 static void msg_process(union log_msgs msg, bool bypass);
 
+uint32_t logger_started = 0;
+uint32_t logger_enabled = 0;
+
+#ifdef CONFIG_IMX
+
+//volatile uint32_t __aligned(64) __attribute__((section(".data"))) logger_status[3] = {0x77771111, 0x77772222, 0x77773333};
+volatile uint32_t logger_status[3] = {0x77771111, 0x77772222, 0x77773333};
+
+void my_cache_flush(void *addr, size_t bytes);
+
+void set_logger_status(uint32_t status)
+{
+	int i = 0;
+
+	for (i = 0; i < 3; i++) {
+		logger_status[i] = status;
+	}
+
+	/* cacheable, so flush cache */
+	//while(1) {
+		my_cache_flush(logger_status, sizeof(logger_status));
+	//}
+}
+#else
+void set_logger_status(uint32_t status)
+{}
+#endif
+
+extern void set_status(uint32_t status, int idx);
+
 static log_timestamp_t dummy_timestamp(void)
 {
 	return 0;
@@ -1391,14 +1421,34 @@ static void log_process_thread_timer_expiry_fn(struct k_timer *timer)
 	k_sem_give(&log_process_thread_sem);
 }
 
+void set_sof_status(uint32_t status);
+
+uint32_t log_core_started_mask_3_cnt = 0;
+uint32_t log_core_enabled_mask_3_cnt = 0;
+uint32_t log_process_thread_cnt = 0;
+
+extern uint32_t my_int_mask_3_cnt;
+
 static void log_process_thread_func(void *dummy1, void *dummy2, void *dummy3)
 {
 	__ASSERT_NO_MSG(log_backend_count_get() > 0);
 
+	logger_started = 1;
+	/* Save and display my_int_mask_3_cnt from _xtensa_handle_one_int3()
+	 *
+	 * Verify how many times the interrupt handler was executed so far
+	 */
+	//log_core_started_mask_3_cnt = my_int_mask_3_cnt;
+
+	set_logger_status(0x77770001);
+	//set_status(0x77770002, 14);
+
+	//set_sof_status(0x44440005);
+
 	log_init();
 	thread_set(k_current_get());
-
 	while (true) {
+		log_process_thread_cnt++;
 		if (log_process(false) == false) {
 			k_sem_take(&log_process_thread_sem, K_FOREVER);
 		}
@@ -1411,19 +1461,31 @@ struct k_thread logging_thread;
 static int enable_logger(const struct device *arg)
 {
 	ARG_UNUSED(arg);
-
+	//set_sof_status(0x44440001);
 	if (IS_ENABLED(CONFIG_LOG_PROCESS_THREAD)) {
 		k_timer_init(&log_process_thread_timer,
 				log_process_thread_timer_expiry_fn, NULL);
 		/* start logging thread */
+		//set_sof_status(0x44440002);
 		k_thread_create(&logging_thread, logging_stack,
 				K_KERNEL_STACK_SIZEOF(logging_stack),
 				log_process_thread_func, NULL, NULL, NULL,
 				K_LOWEST_APPLICATION_THREAD_PRIO, 0, K_NO_WAIT);
+		//set_sof_status(0x44440003);
 		k_thread_name_set(&logging_thread, "logging");
 	} else {
 		log_init();
 	}
+	//set_sof_status(0x44440004);
+	logger_enabled = 1;
+
+	//set_status(0x77770001, 31);
+
+	/* Save and display my_int_mask_3_cnt from _xtensa_handle_one_int3()
+	 *
+	 * Verify how many times the interrupt handler was executed so far
+	 */
+	//log_core_enabled_mask_3_cnt = my_int_mask_3_cnt;
 
 	return 0;
 }

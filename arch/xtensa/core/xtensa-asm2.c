@@ -16,6 +16,10 @@
 
 LOG_MODULE_DECLARE(os, CONFIG_KERNEL_LOG_LEVEL);
 
+void set_sof_status(uint32_t status);
+extern void set_status(uint32_t status, int idx);
+extern void set_ps_val(uint32_t status, int idx);
+
 void *xtensa_init_stack(struct k_thread *thread, int *stack_top,
 			void (*entry)(void *, void *, void *),
 			void *arg1, void *arg2, void *arg3)
@@ -85,6 +89,9 @@ void z_irq_spurious(const void *arg)
 
 	__asm__ volatile("rsr.interrupt %0" : "=r"(irqs));
 	__asm__ volatile("rsr.intenable %0" : "=r"(ie));
+
+	//set_status(irqs, 29);
+
 	LOG_ERR(" ** Spurious INTERRUPT(s) %p, INTENABLE = %p",
 		(void *)irqs, (void *)ie);
 	z_xtensa_fatal_error(K_ERR_SPURIOUS_IRQ, NULL);
@@ -136,6 +143,8 @@ static inline unsigned int get_bits(int offset, int num_bits, unsigned int val)
 	return val & mask;
 }
 
+uint32_t cnt[7] = {0, 0, 0, 0, 0, 0, 0};
+
 /* The wrapper code lives here instead of in the python script that
  * generates _xtensa_handle_one_int*().  Seems cleaner, still kind of
  * ugly.
@@ -145,16 +154,22 @@ static inline unsigned int get_bits(int offset, int num_bits, unsigned int val)
  */
 #define DEF_INT_C_HANDLER(l)				\
 __unused void *xtensa_int##l##_c(void *interrupted_stack)	\
-{							   \
-	uint32_t irqs, intenable, m;			   \
-	__asm__ volatile("rsr.interrupt %0" : "=r"(irqs)); \
+{								   \
+	uint32_t irqs, intenable, m;			\
+	cnt[l-1]++;						\
+	__asm__ volatile("rsr.interrupt %0" : "=r"(irqs));	\
+	set_status(irqs, l);					\
 	__asm__ volatile("rsr.intenable %0" : "=r"(intenable)); \
+	set_status(intenable, l+7);				\
 	irqs &= intenable;					\
+	set_status(irqs, l+14);					\
+	set_status(cnt[l-1], l+21);				\
 	while ((m = _xtensa_handle_one_int##l(irqs))) {		\
 		irqs ^= m;					\
 		__asm__ volatile("wsr.intclear %0" : : "r"(m)); \
 	}							\
-	return z_get_next_switch_handle(interrupted_stack);		\
+	set_status(cnt[l-1], l+28);				\
+	return z_get_next_switch_handle(interrupted_stack);	\
 }
 
 DEF_INT_C_HANDLER(2)
@@ -175,7 +190,14 @@ void *xtensa_excint1_c(int *interrupted_stack)
 {
 	int cause, vaddr, *bsa = *(int **)interrupted_stack;
 
+	//set_sof_status(0x79990001);
+
+	set_status(0x99990001, 9);
+
 	__asm__ volatile("rsr.exccause %0" : "=r"(cause));
+
+	//set_sof_status(0x99990001 + cause);
+	set_status(cause, 9);
 
 	if (cause == EXCCAUSE_LEVEL1_INTERRUPT) {
 

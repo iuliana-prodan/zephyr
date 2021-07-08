@@ -19,6 +19,9 @@ struct z_spinlock_key {
 	int key;
 };
 
+void set_status_inc(int idx);
+void set_status(uint32_t status, int idx);
+
 /**
  * @brief Kernel Spin Lock
  *
@@ -124,7 +127,7 @@ static ALWAYS_INLINE k_spinlock_key_t k_spin_lock(struct k_spinlock *l)
 	 * actually a wrapper for a global spinlock!
 	 */
 	k.key = arch_irq_lock();
-
+	set_status(k.key, 52);
 #ifdef CONFIG_SPIN_VALIDATE
 	__ASSERT(z_spin_lock_valid(l), "Recursive spinlock %p", l);
 # ifdef CONFIG_KERNEL_COHERENCE
@@ -140,6 +143,7 @@ static ALWAYS_INLINE k_spinlock_key_t k_spin_lock(struct k_spinlock *l)
 #ifdef CONFIG_SPIN_VALIDATE
 	z_spin_lock_set_owner(l);
 #endif
+
 	return k;
 }
 
@@ -182,6 +186,7 @@ static ALWAYS_INLINE void k_spin_unlock(struct k_spinlock *l,
 	 */
 	atomic_clear(&l->locked);
 #endif
+	set_status(key.key, 53);
 	arch_irq_unlock(key.key);
 }
 

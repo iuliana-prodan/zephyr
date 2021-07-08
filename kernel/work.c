@@ -18,6 +18,35 @@
 #include <ksched.h>
 #include <sys/printk.h>
 
+uint32_t work_q_started = 0;
+uint32_t work_q_enabled = 0;
+
+extern void set_status(uint32_t status, int idx);
+
+#ifdef CONFIG_IMX
+
+volatile uint32_t work_q_status[3] = {0x88881111, 0x88882222, 0x88883333};
+
+void my_cache_flush(void *addr, size_t bytes);
+
+void set_work_q_status(uint32_t status)
+{
+	int i = 0;
+
+	for (i = 0; i < 3; i++) {
+		work_q_status[i] = status;
+	}
+
+	/* cacheable, so flush cache */
+	//while(1) {
+		my_cache_flush(work_q_status, sizeof(work_q_status));
+	//}
+}
+#else
+void set_work_q_status(uint32_t status)
+{}
+#endif
+
 static inline void flag_clear(uint32_t *flagp,
 			      uint32_t bit)
 {
@@ -573,6 +602,14 @@ bool k_work_cancel_sync(struct k_work *work,
 	return pending;
 }
 
+void set_sof_status(uint32_t status);
+
+uint32_t work_q_enabled_mask_3_cnt = 0;
+uint32_t work_q_started_mask_3_cnt = 0;
+uint32_t work_q_process_thread_cnt = 0;
+
+extern uint32_t my_int_mask_3_cnt;
+
 /* Loop executed by a work queue thread.
  *
  * @param workq_ptr pointer to the work queue structure
@@ -581,11 +618,27 @@ static void work_queue_main(void *workq_ptr, void *p2, void *p3)
 {
 	struct k_work_q *queue = (struct k_work_q *)workq_ptr;
 
+	//set_sof_status(0x66660003);
+
+	work_q_started = 1;
+
+	//set_status(0x66660003, 12);
+
+	/* Save and display my_int_mask_3_cnt from _xtensa_handle_one_int3()
+	 *
+	 * Verify how many times the interrupt handler was executed so far
+	 */
+	//work_q_started_mask_3_cnt = my_int_mask_3_cnt;
+
+	set_work_q_status(0x44440002);
+
 	while (true) {
 		sys_snode_t *node;
 		struct k_work *work = NULL;
 		k_work_handler_t handler = NULL;
 		k_spinlock_key_t key = k_spin_lock(&lock);
+
+		work_q_process_thread_cnt++;
 
 		/* Check for and prepare any new work. */
 		node = sys_slist_get(&queue->pending);
@@ -693,14 +746,24 @@ void k_work_queue_start(struct k_work_q *queue,
 	(void)k_thread_create(&queue->thread, stack, stack_size,
 			      work_queue_main, queue, NULL, NULL,
 			      prio, 0, K_FOREVER);
-
+	//set_sof_status(0x66660001);
 	if ((cfg != NULL) && (cfg->name != NULL)) {
 		k_thread_name_set(&queue->thread, cfg->name);
 	}
+	work_q_enabled = 1;
+	//set_status(0x66660001, 30);
 
 	k_thread_start(&queue->thread);
 
+	//set_sof_status(0x66660002);
+	//set_status(0x66660002, 11);
 	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_work_queue, start, queue);
+
+	/* Save and display my_int_mask_3_cnt from _xtensa_handle_one_int3()
+	 *
+	 * Verify how many times the interrupt handler was executed so far
+	 */
+	//work_q_enabled_mask_3_cnt = my_int_mask_3_cnt;
 }
 
 int k_work_queue_drain(struct k_work_q *queue,

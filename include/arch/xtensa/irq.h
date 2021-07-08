@@ -11,6 +11,9 @@
 
 #define CONFIG_GEN_IRQ_START_VECTOR 0
 
+void set_status_inc(int idx);
+void set_status(uint32_t status, int idx);
+
 /*
  * Call this function to enable the specified interrupts.
  *
@@ -107,9 +110,12 @@ static ALWAYS_INLINE void z_xtensa_irq_disable(uint32_t irq)
 static ALWAYS_INLINE unsigned int arch_irq_lock(void)
 {
 	unsigned int key;
-
+	set_status_inc(48);
 	__asm__ volatile("rsil %0, %1"
 			 : "=r"(key) : "i"(XCHAL_EXCM_LEVEL) : "memory");
+	set_status_inc(47);
+	set_status(key, 45);
+
 	return key;
 }
 
@@ -117,6 +123,7 @@ static ALWAYS_INLINE void arch_irq_unlock(unsigned int key)
 {
 	__asm__ volatile("wsr.ps %0; rsync"
 			 :: "r"(key) : "memory");
+	set_status(key, 46);
 }
 
 static ALWAYS_INLINE bool arch_irq_unlocked(unsigned int key)

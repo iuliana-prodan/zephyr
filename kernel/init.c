@@ -40,6 +40,130 @@ LOG_MODULE_REGISTER(os, CONFIG_KERNEL_LOG_LEVEL);
 /* the only struct z_kernel instance */
 struct z_kernel _kernel;
 
+uint32_t init_multithread_enabled_mask_3_cnt = 0;
+uint32_t init_bg_thread_main_mask_3_cnt = 0;
+
+extern uint32_t my_int_mask_3_cnt;
+
+/* all 3 sections are cacheable */
+volatile uint32_t __aligned(64) __attribute__((section(".noinit"))) sof_status1[3] = {0x0, 0x0, 0x0};
+volatile uint32_t __aligned(64) __attribute__((section(".data"))) sof_status2[3] = {0x22221111, 0x22222222, 0x22223333};
+volatile uint32_t __aligned(64) __attribute__((section(".heap_mem"))) sof_status3[3] = {0x33331111, 0x33332222, 0x33333333};
+
+volatile uint32_t sof_status[55] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+
+volatile uint32_t ps_status[55] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+
+
+#ifdef CONFIG_IMX
+
+void my_cache_flush(void *addr, size_t bytes)
+{
+	size_t step = XCHAL_DCACHE_LINESIZE;
+	size_t first = ROUND_DOWN(addr, step);
+	size_t last = ROUND_UP(((long)addr) + bytes, step);
+
+	for (size_t line = first; bytes && line < last; line += step) {
+		__asm__ volatile("dhwb %0, 0" :: "r"(line));
+	}
+}
+
+void set_sof_status(uint32_t status)
+{
+	int i = 0;
+	int j = 0;
+
+	for (i = 0; i < 3; i++) {
+		sof_status1[i] = status;
+		sof_status2[i] = status;
+		sof_status3[i] = status;
+	}
+
+	/* all 3 sections are cacheable, so flush cache */
+	while(j < 100) {
+		my_cache_flush(sof_status1, sizeof(sof_status1));
+		my_cache_flush(sof_status2, sizeof(sof_status2));
+		my_cache_flush(sof_status3, sizeof(sof_status3));
+		j++;
+	}
+}
+
+void set_status(uint32_t status, int idx)
+{
+	int i = 0;
+
+	sof_status[idx] = status;
+
+	sof_status[54] = 0x11111111;
+
+	/* flush cache */
+	while(i < 100) {
+		my_cache_flush(sof_status, 220);
+		i++;
+	}
+}
+
+void set_ps_val(uint32_t status, int idx)
+{
+	int i = 0;
+
+	ps_status[idx] = status;
+
+	ps_status[54] = 0x11111111;
+
+	/* flush cache */
+	while(i < 100) {
+		my_cache_flush(ps_status, 220);
+		i++;
+	}
+}
+void set_status_inc(int idx)
+{
+	int i = 0;
+
+	sof_status[idx] = sof_status[idx] + 1;
+
+	sof_status[0] = 0x11111111;
+
+	/* flush cache */
+	while(i < 100) {
+		my_cache_flush(sof_status, 160);
+		i++;
+	}
+
+}
+#else
+void set_sof_status(uint32_t status)
+{}
+void set_status(uint32_t status, int idx)
+{}
+void set_ps_val(uint32_t status, int idx)
+{}
+void set_status_inc(int idx)
+{}
+#endif
+
+
 /* init/main and idle threads */
 K_THREAD_STACK_DEFINE(z_main_stack, CONFIG_MAIN_STACK_SIZE);
 struct k_thread z_main_thread;
@@ -163,6 +287,8 @@ extern volatile uintptr_t __stack_chk_guard;
 __pinned_bss
 bool z_sys_post_kernel;
 
+uint32_t count = 0;
+
 extern void boot_banner(void);
 
 /**
@@ -180,7 +306,9 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	ARG_UNUSED(unused1);
 	ARG_UNUSED(unused2);
 	ARG_UNUSED(unused3);
+	uint32_t ps;
 
+	//set_sof_status(0x33330001);
 #ifdef CONFIG_MMU
 	/* Invoked here such that backing store or eviction algorithms may
 	 * initialize kernel objects, and that all POST_KERNEL and later tasks
@@ -190,11 +318,26 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	z_mem_manage_init();
 #endif /* CONFIG_MMU */
 	z_sys_post_kernel = true;
+	//set_sof_status(0x33330002);
+
+	//set_status(0x33330002, 0);
+
+	/* Save and display my_int_mask_3_cnt from _xtensa_handle_one_int3()
+	 *
+	 * Verify how many times the interrupt handler was executed so far
+	 */
+	//init_bg_thread_main_mask_3_cnt = my_int_mask_3_cnt;
+
+	__asm__ volatile("rsr.ps %0; isync" : "=r"(ps));
+	set_ps_val(ps, 1);
 
 	z_sys_init_run_level(_SYS_INIT_LEVEL_POST_KERNEL);
+
+	set_sof_status(0x33330003);
 #if CONFIG_STACK_POINTER_RANDOM
 	z_stack_adjust_initialized = 1;
 #endif
+	set_sof_status(0x33330004);
 	boot_banner();
 
 #if defined(CONFIG_CPLUSPLUS) && !defined(CONFIG_ARCH_POSIX)
@@ -204,25 +347,25 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	__do_global_ctors_aux();
 	__do_init_array_aux();
 #endif
-
+	set_sof_status(0x33330006);
 	/* Final init level before app starts */
 	z_sys_init_run_level(_SYS_INIT_LEVEL_APPLICATION);
-
+	set_sof_status(0x33330007);
 	z_init_static_threads();
-
+	set_sof_status(0x33330008);
 #ifdef CONFIG_KERNEL_COHERENCE
 	__ASSERT_NO_MSG(arch_mem_coherent(&_kernel));
 #endif
-
+	//set_sof_status(0x33330009);
 #ifdef CONFIG_SMP
 	z_smp_init();
 	z_sys_init_run_level(_SYS_INIT_LEVEL_SMP);
 #endif
-
+	//set_sof_status(0x3333000A);
 	extern void main(void);
-
+	//set_sof_status(0x3333000B);
 	main();
-
+	//set_sof_status(0x3333000C);
 	/* Mark nonessenrial since main() has no more work to do */
 	z_main_thread.base.user_options &= ~K_ESSENTIAL;
 
@@ -448,6 +591,13 @@ FUNC_NORETURN void z_cstart(void)
 	timing_init();
 	timing_start();
 #endif
+	//set_sof_status(0x22220002);
+
+	/* Save and display my_int_mask_3_cnt from _xtensa_handle_one_int3()
+	 *
+	 * Verify how many times the interrupt handler was executed so far
+	 */
+	//init_multithread_enabled_mask_3_cnt = my_int_mask_3_cnt;
 
 #ifdef CONFIG_MULTITHREADING
 	switch_to_main_thread(prepare_multithreading());

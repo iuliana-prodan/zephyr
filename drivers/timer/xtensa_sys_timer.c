@@ -25,6 +25,14 @@ static void set_ccompare(uint32_t val)
 			  :: "r"(val));
 }
 
+static uint32_t get_PS(void)
+{
+	uint32_t val;
+
+	__asm__ volatile ("rsr.PS %0" : "=r"(val));
+	return val;
+}
+
 static uint32_t ccount(void)
 {
 	uint32_t val;
@@ -37,7 +45,16 @@ static void ccompare_isr(const void *arg)
 {
 	ARG_UNUSED(arg);
 
+	uint32_t val = 0;
+
+	val = get_PS();
+	set_status(val, 41);
 	k_spinlock_key_t key = k_spin_lock(&lock);
+	val = get_PS();
+	set_status(val, 42);
+
+	set_status(key.key, 49);
+
 	uint32_t curr = ccount();
 	uint32_t dticks = (curr - last_count) / CYC_PER_TICK;
 
@@ -51,10 +68,20 @@ static void ccompare_isr(const void *arg)
 		}
 		set_ccompare(next);
 	}
+	val = get_PS();
+	set_status(val, 43);
 
+	set_status(key.key, 50);
 	k_spin_unlock(&lock, key);
+	val = get_PS();
+	set_status(val, 44);
+	set_status(key.key, 51);
+
 	sys_clock_announce(IS_ENABLED(CONFIG_TICKLESS_KERNEL) ? dticks : 1);
 }
+
+uint32_t xtensa_sys_timer_enabled_mask_3_cnt = 0;
+extern uint32_t my_int_mask_3_cnt;
 
 int sys_clock_driver_init(const struct device *dev)
 {
@@ -63,6 +90,13 @@ int sys_clock_driver_init(const struct device *dev)
 	IRQ_CONNECT(TIMER_IRQ, 0, ccompare_isr, 0, 0);
 	set_ccompare(ccount() + CYC_PER_TICK);
 	irq_enable(TIMER_IRQ);
+
+	/* Save and display my_int_mask_3_cnt from _xtensa_handle_one_int3()
+	 *
+	 * Verify how many times the interrupt handler was executed so far
+	 */
+	xtensa_sys_timer_enabled_mask_3_cnt = my_int_mask_3_cnt;
+
 	return 0;
 }
 

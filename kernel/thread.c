@@ -611,6 +611,7 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 
 	return stack_ptr;
 }
+void set_sof_status(uint32_t status);
 
 #ifdef CONFIG_MULTITHREADING
 k_tid_t z_impl_k_thread_create(struct k_thread *new_thread,
@@ -620,14 +621,15 @@ k_tid_t z_impl_k_thread_create(struct k_thread *new_thread,
 			      int prio, uint32_t options, k_timeout_t delay)
 {
 	__ASSERT(!arch_is_in_isr(), "Threads may not be created in ISRs");
-
+	//set_sof_status(0x77770001);
 	z_setup_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3,
 			  prio, options, NULL);
-
+	//set_sof_status(0x77770002);
 	if (!K_TIMEOUT_EQ(delay, K_FOREVER)) {
+		//set_sof_status(0x77770003);
 		schedule_new_thread(new_thread, delay);
 	}
-
+	//set_sof_status(0x77770004);
 	return new_thread;
 }
 
