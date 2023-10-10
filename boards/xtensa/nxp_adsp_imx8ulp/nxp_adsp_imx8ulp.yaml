@@ -1,0 +1,10 @@
+identifier: nxp_adsp_imx8ulp
+name: NXP i.MX8ULP Audio DSP
+type: mcu
+arch: xtensa
+toolchain:
+  - zephyr
+testing:
+  only_tags:
+    - kernel
+    - sof

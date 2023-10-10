@@ -1,0 +1,10 @@
+# Copyright (c) 2023 NXP
+# SPDX-License-Identifier: Apache-2.0
+
+choice
+	prompt "NXP IMX8ULP ADSP SoC Selection"
+
+	config SOC_NXP_IMX8ULP
+		bool "NXP IMX8ULP"
+		depends on SOC_SERIES_NXP_IMX8ULP
+endchoice
