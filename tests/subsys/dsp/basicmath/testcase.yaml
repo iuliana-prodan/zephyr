@@ -6,6 +6,7 @@ tests:
       - sam_e70_xplained/same70q21
       - mps2/an521/cpu0
       - native_sim
+      - imx8mp_evk/mimx8ml8/adsp
     tags: zdsp
     min_flash: 128
     min_ram: 64
@@ -26,3 +27,8 @@ tests:
     toolchain_allow: arcmwdt
     platform_allow: nsim/nsim_em11d
     extra_args: CONF_FILE=prj_arc.conf
+  zdsp.basicmath.xtensandsp:
+    filter: CONFIG_XTENSA
+    #toolchain_allow: xt-clang
+    platform_allow: imx8mp_evk/mimx8ml8/adsp
+    extra_args: CONF_FILE=prj_xtensa.conf

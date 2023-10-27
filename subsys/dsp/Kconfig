@@ -23,6 +23,7 @@ choice DSP_BACKEND
 	prompt "DSP library backend selection"
 	default DSP_BACKEND_CMSIS if CMSIS_DSP
 	default DSP_BACKEND_ARCMWDT if ARC && "$(ZEPHYR_TOOLCHAIN_VARIANT)" = "arcmwdt"
+	default DSP_BACKEND_XTENSANDSP if XTENSA
 	default DSP_BACKEND_CUSTOM
 
 config DSP_BACKEND_CMSIS
@@ -49,6 +50,13 @@ config DSP_BACKEND_ARCMWDT
 	help
 	  Implement the various zephyr DSP functions using the MWDT-DSP library. This feature
 	  requires the MetaWare toolchain and CMSIS module to be selected.
+
+config DSP_BACKEND_XTENSANDSP
+        bool "Use the NatureDSP library as the math backend"
+        depends on CMSIS_DSP
+        select DSP_BACKEND_HAS_STATIC
+        help
+          Implement the various zephyr DSP functions using the NatureDSP library.
 
 endchoice
 
