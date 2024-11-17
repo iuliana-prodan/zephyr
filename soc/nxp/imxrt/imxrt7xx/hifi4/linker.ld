@@ -550,6 +550,15 @@ SECTIONS
     _memmap_seg_dsp_core_end = ALIGN(0x8);
   } >dsp_core_seg :dsp_core_bss_phdr
 
+  .heap_mem (NOLOAD) : ALIGN(8)
+  {
+    . = ALIGN (8);
+    _heap_mem_start = ABSOLUTE(.);
+    *(*.heap_mem)
+    _heap_mem_end = ABSOLUTE(.);
+
+  } >dsp_core_seg :dsp_core_phdr
+
   PROVIDE(__stack = 0x20580000);
   _heap_sentry = 0x20580000;
 
