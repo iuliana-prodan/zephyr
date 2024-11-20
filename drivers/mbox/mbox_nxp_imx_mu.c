@@ -133,6 +133,10 @@ static void handle_irq(const struct device *dev);
 	{                                                                                          \
 		ARG_UNUSED(dev);                                                                   \
 		MU_Init(nxp_imx_mu_##idx##_config.base);                                           \
+		MU_TriggerInterrupts(nxp_imx_mu_##idx##_config.base, kMU_GenInt0InterruptTrigger | \
+				   kMU_GenInt1InterruptTrigger |                                           \
+				   kMU_GenInt2InterruptTrigger |                                   \
+						   kMU_GenInt3InterruptTrigger);                   \
 		IRQ_CONNECT(DT_INST_IRQN(idx), DT_INST_IRQ(idx, priority), MU_##idx##_IRQHandler,  \
 			    NULL, 0);                                                              \
 		irq_enable(DT_INST_IRQN(idx));                                                     \
