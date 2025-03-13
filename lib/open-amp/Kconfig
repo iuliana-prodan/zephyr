@@ -46,3 +46,16 @@ config OPENAMP_COPY_RSC_TABLE
 
 	  This is not needed if the remote loads this firmware and has control
 	  over the placement of the .resource_table section such as remoteproc.
+
+config OPENAMP_RSC_TABLE_VENDOR_RSC_LENGTH
+	int "Vendor specific length of the resource"
+	default 0
+	depends on OPENAMP_RSC_TABLE
+	help
+	  Length of the vendor specific resource supported by remote processor.
+
+config OPENAMP_RSC_TABLE_VENDOR_DATA_FEATURES
+	hex "Vendor specific features supported by remoteproc"
+	depends on (OPENAMP_RSC_TABLE_VENDOR_RSC_LENGTH > 0)
+	help
+	  Specify the vendor specific features supported by remote processor
