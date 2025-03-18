@@ -8,5 +8,15 @@ compatible: "zephyr,addr-translation"
 include: base.yaml
 
 properties:
+  ranges:
+    type: array
+    required: true
+    description: |
+      Driver and device adresses.
+  dma-ranges:
+    type: array
+    required: true
+    description: |
+      Driver and device adresses.
   reg:
     required: true

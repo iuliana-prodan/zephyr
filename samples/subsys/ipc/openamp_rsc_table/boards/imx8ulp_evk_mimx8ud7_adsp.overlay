@@ -21,6 +21,10 @@
 	addr_trans: addr_trans@8fef0000 {
 		compatible = "zephyr,addr-translation";
 		reg = <0x8fef0000 0x110000>;
+		 #address-cells = <1>;
+		/* <child parent length> */
+		ranges = <0x1bef0000 0x8fef0000 0x110000>;
+		dma-ranges = <0x1bef0000 0x8fef0000 0x110000>;
 		status = "okay";
 	};
 
