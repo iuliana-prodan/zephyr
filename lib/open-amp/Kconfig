@@ -54,21 +54,20 @@ config OPENAMP_VENDOR_RSC_TABLE_ENTRY
 	help
 	  Enable vendor-specific features supported by remote processor.
 
-config OPENAMP_VENDOR_RSC_TYPE
-	int "Vendor specific type of the resource entry"
-	default 128
-	range 128 512
+config OPENAMP_VENDOR_RSC_LEN
+	int "Vendor specific payload length"
+	default 12
 	depends on OPENAMP_VENDOR_RSC_TABLE_ENTRY
 	help
 	  Length, in words, of the vendor specific resource supported by remote processor.
 
 config OPENAMP_VENDOR_RSC_TABLE_FILE
-	string "Source file containing vendor-specific resource table"
-	default "resource_table.c"
+	string "Header file containing vendor-specific data"
+	default "resource_table.h"
 	depends on OPENAMP_VENDOR_RSC_TABLE_ENTRY
 	help
-	  Name of a source file containing vendor-specific
-	  resource table.
+	  Name of a header file containing vendor-specific
+	  header and payload for resource table.
 
 config OPENAMP_ADDR_TRANSLATION
 	bool "Address translation support for OpenAMP"

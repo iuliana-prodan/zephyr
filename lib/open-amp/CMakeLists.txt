@@ -5,13 +5,11 @@
 #
 
 zephyr_include_directories_ifdef(CONFIG_OPENAMP_RSC_TABLE .)
+zephyr_sources_ifdef(CONFIG_OPENAMP_RSC_TABLE resource_table.c)
+
 # include vendor-specific resource table files
-if(CONFIG_OPENAMP_VENDOR_RSC_TABLE_ENTRY)
-  zephyr_include_directories(vendor_rsc_table)
-  zephyr_sources(vendor_rsc_table/${CONFIG_OPENAMP_VENDOR_RSC_TABLE_FILE})
-elseif(CONFIG_OPENAMP_RSC_TABLE)
-  zephyr_sources(resource_table.c)
-endif()
+zephyr_include_directories_ifdef(CONFIG_OPENAMP_VENDOR_RSC_TABLE_ENTRY vendor_rsc_table)
+
 # include address translation files
 if(CONFIG_OPENAMP_ADDR_TRANSLATION)
   zephyr_include_directories(addr_translation)

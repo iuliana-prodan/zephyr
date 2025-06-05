@@ -30,6 +30,10 @@ extern "C" {
 
 #endif
 
+#if defined(CONFIG_OPENAMP_VENDOR_RSC_TABLE_ENTRY)
+#include CONFIG_OPENAMP_VENDOR_RSC_TABLE_FILE
+#endif
+
 enum rsc_table_entries {
 #if (CONFIG_OPENAMP_RSC_TABLE_NUM_RPMSG_BUFF > 0)
 	RSC_TABLE_VDEV_ENTRY,
@@ -59,8 +63,10 @@ struct fw_resource_table {
 #endif
 
 #if defined(CONFIG_OPENAMP_VENDOR_RSC_TABLE_ENTRY)
-	/* vendor-specific resource type can be values 128-512 */
-	uint32_t vendor_type;
+	/* vendor-specific resource header */
+	struct fw_rsc_vendor vendor_hdr;
+	/* vendor-specific payload */
+	uint32_t vendor_payload[CONFIG_OPENAMP_VENDOR_RSC_LEN];
 #endif
 } METAL_PACKED_END;
 
@@ -77,7 +83,7 @@ struct fw_resource_table {
 #endif
 
 #if defined(CONFIG_OPENAMP_VENDOR_RSC_TABLE_ENTRY)
-	#define vendor_type_offset	offsetof(struct fw_resource_table, vendor_type),
+	#define vendor_type_offset	offsetof(struct fw_resource_table, vendor_hdr),
 #else
 	#define vendor_type_offset
 #endif
@@ -110,9 +116,9 @@ struct fw_resource_table {
 #endif
 
 #if defined(CONFIG_OPENAMP_VENDOR_RSC_TABLE_ENTRY)
-	#define vendor_type_entry	.vendor_type = CONFIG_OPENAMP_VENDOR_RSC_TYPE,
+	#define vendor_payload_entry	RESOURCE_TABLE_VENDOR_PAYLOAD,
 #else
-	#define vendor_type_entry
+	#define vendor_payload_entry
 #endif
 
 #define RESOURCE_TABLE_INIT			\
@@ -128,7 +134,7 @@ struct fw_resource_table {
 	},					\
 	vdev_entry				\
 	cm_trace_entry				\
-	vendor_type_entry			\
+	vendor_payload_entry			\
 }
 
 void rsc_table_get(struct fw_resource_table **table_ptr, int *length);
