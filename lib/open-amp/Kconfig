@@ -61,3 +61,17 @@ config OPENAMP_VENDOR_ADDR_TRANSLATION_FILE
 	help
 	  Name of a header file containing vendor-specific
 	  address translation table.
+
+config OPENAMP_VENDOR_RSC_TABLE_ENTRY
+	bool "Vendor specific resource entry"
+	depends on OPENAMP_RSC_TABLE
+	help
+	  Enable vendor-specific features supported by remote processor.
+
+config OPENAMP_VENDOR_RSC_TABLE_FILE
+	string "Source file containing vendor-specific resource table"
+	default "resource_table.c"
+	depends on OPENAMP_VENDOR_RSC_TABLE_ENTRY
+	help
+	  Name of a source file containing vendor-specific
+	  resource table.
